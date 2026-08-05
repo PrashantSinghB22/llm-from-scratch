@@ -1,13 +1,7 @@
-from training.dataset import create_dataset
+dog = [8, 5, 7]
+cat = [7, 5, 8]
+banana = [1, 9, 0]
 
-encoded = [5,2,8,1,9,4]
-
-inputs, targets = create_dataset(encoded, block_size=4)
-
-print("Inputs:")
-for x in inputs:
-    print(x)
-
-print("\nTargets:")
-for y in targets:
-    print(y)
+print("Dog:", dog)
+print("Cat:", cat)
+print("Banana:", banana)
