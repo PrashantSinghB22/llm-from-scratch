@@ -14,3 +14,7 @@ def build_mappings(chars):
   itos = {i: ch for i, ch in enumerate(chars)}
 
   return stoi, itos
+
+def encode(text, stoi):
+  return [stoi[ch] for ch in text]
+  

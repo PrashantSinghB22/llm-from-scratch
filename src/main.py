@@ -4,6 +4,7 @@ from tokenizer.character_tokenizer import (
     read_text_file,
     build_vocabulary,
     build_mappings,
+    encode,
 )
 
 data_path = Path("data") / "wizard_of_oz.txt"
@@ -14,11 +15,10 @@ chars = build_vocabulary(text)
 
 stoi, itos = build_mappings(chars)
 
-print("Vocabulary Size:", len(chars))
+sample = "Hello"
 
-print()
+encoded = encode(sample, stoi)
 
-print("First 10 character mappings")
+print(sample)
 
-for char in chars[:10]:
-    print(repr(char), "→", stoi[char])
+print(encoded)
