@@ -17,4 +17,9 @@ def build_mappings(chars):
 
 def encode(text, stoi):
   return [stoi[ch] for ch in text]
+
+def decode(ids, itos):
+  return "".join([itos[i] for i in ids])
+  
+
   

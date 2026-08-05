@@ -1,24 +1,13 @@
-from pathlib import Path
+from training.dataset import create_dataset
 
-from tokenizer.character_tokenizer import (
-    read_text_file,
-    build_vocabulary,
-    build_mappings,
-    encode,
-)
+encoded = [5,2,8,1,9,4]
 
-data_path = Path("data") / "wizard_of_oz.txt"
+inputs, targets = create_dataset(encoded, block_size=4)
 
-text = read_text_file(data_path)
+print("Inputs:")
+for x in inputs:
+    print(x)
 
-chars = build_vocabulary(text)
-
-stoi, itos = build_mappings(chars)
-
-sample = "Hello"
-
-encoded = encode(sample, stoi)
-
-print(sample)
-
-print(encoded)
+print("\nTargets:")
+for y in targets:
+    print(y)
