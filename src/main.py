@@ -1,15 +1,18 @@
-import torch
-
-from models.bigram import BigramLanguageModel
-
-vocab_size = 65
-
 model = BigramLanguageModel(vocab_size)
 
-idx = torch.tensor([2, 10, 25])
+optimizer = torch.optim.AdamW(
+    model.parameters(),
+    lr=1e-3
+)
 
-logits = model(idx)
+for step in range(1000):
 
-print("Input Shape :", idx.shape)
-print("Output Shape:", logits.shape)
-print(logits)
+    optimizer.zero_grad()
+
+    logits = model(inputs)
+
+    # loss = ...
+
+    # loss.backward()
+
+    # optimizer.step()

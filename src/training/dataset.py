@@ -10,3 +10,9 @@ def create_dataset(encoded_text, block_size):
     targets.append(y)
 
   return inputs, targets
+
+def get_batch(data, block_size, batch_size):
+    """
+    Returns one random batch of input-target pairs.
+    """
+    pass
