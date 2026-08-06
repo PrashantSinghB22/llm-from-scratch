@@ -1,18 +1,27 @@
-model = BigramLanguageModel(vocab_size)
+import torch
 
-optimizer = torch.optim.AdamW(
-    model.parameters(),
-    lr=1e-3
+from training.dataset import get_batch
+
+data = torch.tensor(
+    [5,2,8,1,9,4,7,6]
 )
 
-for step in range(1000):
+x, y = get_batch(
+    data,
+    block_size=4,
+    batch_size=2
+)
 
-    optimizer.zero_grad()
+print("Inputs")
+print(x)
 
-    logits = model(inputs)
+print()
 
-    # loss = ...
+print("Targets")
+print(y)
 
-    # loss.backward()
+print()
 
-    # optimizer.step()
+print(x.shape)
+
+print(y.shape)
