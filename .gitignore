@@ -1,15 +1,19 @@
-# Python
-__pycache__/
-*.pyc
-
 # Virtual Environment
 .venv/
 
-# VS Code
-.vscode/
+# Python cache
+__pycache__/
+*.py[cod]
 
 # Jupyter
 .ipynb_checkpoints/
 
-# macOS
+# VS Code
+.vscode/
+
+# Model checkpoints
+checkpoints/
+
+# OS files
 .DS_Store
+Thumbs.db
