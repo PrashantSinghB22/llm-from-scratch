@@ -1,9 +1,12 @@
-# Virtual Environment
-.venv/
-
-# Python cache
+```gitignore
+# Python
 __pycache__/
 *.py[cod]
+*.pyo
+
+# Virtual Environment
+.venv/
+venv/
 
 # Jupyter
 .ipynb_checkpoints/
@@ -11,9 +14,16 @@ __pycache__/
 # VS Code
 .vscode/
 
-# Model checkpoints
+# PyTorch
 checkpoints/
 
-# OS files
+# macOS
 .DS_Store
+
+# Windows
 Thumbs.db
+
+# Logs
+*.log
+```
+checkpoints/

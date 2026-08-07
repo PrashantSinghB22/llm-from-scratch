@@ -1,108 +1,233 @@
+"""
+gpt.py
+
+Implementation of a GPT-style language model.
+
+The model consists of:
+
+- Token Embeddings
+- Positional Embeddings
+- Stacked Transformer Blocks
+- Final Layer Normalization
+- Linear Language Modeling Head
+
+During training the model predicts the next token in a sequence
+using Cross Entropy Loss.
+
+During inference the model generates text autoregressively by
+sampling one token at a time.
+"""
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
 from src.models.block import Block
 
+
 class GPTLanguageModel(nn.Module):
+    """
+    GPT-style autoregressive language model.
 
-  def __init__(
-      self,
-      vocab_size,
-      n_embed,
-      block_size,
-      num_heads,
-      num_layers
-  ):
-      super().__init__()
+    This model predicts the next token given all previous tokens
+    in the current context window.
+    """
 
-      self.block_size = block_size
+    def __init__(
+        self,
+        vocab_size: int,
+        n_embed: int,
+        block_size: int,
+        num_heads: int,
+        num_layers: int,
+    ) -> None:
+        """
+        Initialize the GPT model.
 
-      self.token_embedding_table = nn.Embedding(
-          vocab_size,
-          n_embed
-      )
+        Args:
+            vocab_size:
+                Number of unique tokens.
 
-      self.position_embedding_table = nn.Embedding(
-          block_size,
-          n_embed
-      )
+            n_embed:
+                Embedding dimension.
 
-      self.blocks = nn.Sequential(
-          *[
-              Block(
-                  n_embed,
-                  num_heads,
-                  block_size
-              )
-              for _ in range(num_layers)
-          ]
-      )
+            block_size:
+                Maximum context length.
 
-      self.ln_f = nn.LayerNorm(
-          n_embed
-      )
+            num_heads:
+                Number of attention heads.
 
-      self.lm_head = nn.Linear(
-          n_embed,
-          vocab_size
-      )
+            num_layers:
+                Number of Transformer blocks.
+        """
+        super().__init__()
 
-  def forward(self, idx, targets=None):
+        self.block_size = block_size
 
-    B, T = idx.shape
-
-    tok_emb = self.token_embedding_table(idx)
-
-    pos_emb = self.position_embedding_table(
-        torch.arange(T, device=idx.device)
-    )
-
-    x = tok_emb + pos_emb
-
-    x = self.blocks(x)
-
-    x = self.ln_f(x)
-
-    logits = self.lm_head(x)
-
-    if targets is None:
-        loss = None
-    else:
-
-        B, T, C = logits.shape
-
-        logits = logits.view(B*T, C)
-
-        targets = targets.view(B*T)
-
-        loss = F.cross_entropy(
-            logits,
-            targets
+        # Learnable token embeddings.
+        self.token_embedding_table = nn.Embedding(
+            vocab_size,
+            n_embed,
         )
 
-    return logits, loss
+        # Learnable positional embeddings.
+        self.position_embedding_table = nn.Embedding(
+            block_size,
+            n_embed,
+        )
 
-  @torch.no_grad()
-  def generate(self, idx, max_new_tokens):
+        # Stack multiple Transformer blocks.
+        self.blocks = nn.Sequential(
+            *[
+                Block(
+                    n_embed,
+                    num_heads,
+                    block_size,
+                )
+                for _ in range(num_layers)
+            ]
+        )
 
-      for _ in range(max_new_tokens):
+        # Final layer normalization.
+        self.ln_f = nn.LayerNorm(
+            n_embed,
+        )
 
-          idx_cond = idx[:, -self.block_size:]
+        # Project hidden states to vocabulary logits.
+        self.lm_head = nn.Linear(
+            n_embed,
+            vocab_size,
+        )
 
-          logits, _ = self(idx_cond)
+    def forward(
+        self,
+        idx: torch.Tensor,
+        targets: torch.Tensor | None = None,
+    ):
+        """
+        Forward pass through the GPT model.
 
-          logits = logits[:, -1, :]
+        Args:
+            idx:
+                Input token IDs with shape (B, T).
 
-          probs = torch.softmax(logits, dim=-1)
+            targets:
+                Target token IDs used during training.
 
-          idx_next = torch.multinomial(
-              probs,
-              num_samples=1
-          )
+        Returns:
+            logits:
+                Vocabulary predictions.
 
-          idx = torch.cat(
-              (idx, idx_next),
-              dim=1)
+            loss:
+                Cross entropy loss if targets are provided,
+                otherwise None.
+        """
 
-      return idx
-      
+        B, T = idx.shape
+
+        # Convert token IDs into embedding vectors.
+        tok_emb = self.token_embedding_table(idx)
+
+        # Create positional embeddings.
+        pos_emb = self.position_embedding_table(
+            torch.arange(
+                T,
+                device=idx.device,
+            )
+        )
+
+        # Combine token and positional information.
+        x = tok_emb + pos_emb
+
+        # Pass through Transformer blocks.
+        x = self.blocks(x)
+
+        # Normalize final hidden states.
+        x = self.ln_f(x)
+
+        # Predict vocabulary logits.
+        logits = self.lm_head(x)
+
+        if targets is None:
+            loss = None
+
+        else:
+
+            B, T, C = logits.shape
+
+            # Flatten for Cross Entropy Loss.
+            logits = logits.view(
+                B * T,
+                C,
+            )
+
+            targets = targets.view(
+                B * T,
+            )
+
+            loss = F.cross_entropy(
+                logits,
+                targets,
+            )
+
+        return logits, loss
+
+    @torch.no_grad()
+    def generate(
+        self,
+        idx: torch.Tensor,
+        max_new_tokens: int,
+    ) -> torch.Tensor:
+        """
+        Generate text autoregressively.
+
+        At every iteration:
+
+        1. Keep only the latest context window.
+        2. Predict the next token.
+        3. Sample from the probability distribution.
+        4. Append the sampled token.
+        5. Repeat.
+
+        Args:
+            idx:
+                Initial prompt.
+
+            max_new_tokens:
+                Number of tokens to generate.
+
+        Returns:
+            Generated token sequence.
+        """
+
+        for _ in range(max_new_tokens):
+
+            # Keep only the most recent context.
+            idx_cond = idx[:, -self.block_size:]
+
+            # Predict next-token logits.
+            logits, _ = self(idx_cond)
+
+            # Use only the final time step.
+            logits = logits[:, -1, :]
+
+            # Convert logits to probabilities.
+            probs = torch.softmax(
+                logits,
+                dim=-1,
+            )
+
+            # Sample the next token.
+            idx_next = torch.multinomial(
+                probs,
+                num_samples=1,
+            )
+
+            # Append the generated token.
+            idx = torch.cat(
+                (idx, idx_next),
+                dim=1,
+            )
+
+        return idx
+

@@ -1,4 +1,25 @@
+"""
+train.py
+
+Train a GPT-style language model from scratch.
+
+This script performs the complete training pipeline:
+
+1. Load the dataset.
+2. Build the character-level vocabulary.
+3. Encode the text into integer token IDs.
+4. Create training and validation datasets.
+5. Generate mini-batches.
+6. Train the GPT model.
+7. Save checkpoints.
+8. Generate sample text.
+
+This script is intentionally kept simple for educational purposes.
+"""
+
 import os
+from pathlib import Path
+
 import torch
 
 from src.models.gpt import GPTLanguageModel
@@ -28,24 +49,30 @@ torch.manual_seed(1337)
 # Load Dataset
 # ============================================================
 
-from pathlib import Path
-
 DATA_PATH = Path("data") / "wizard_of_oz.txt"
 
 with open(DATA_PATH, "r", encoding="utf-8") as f:
     text = f.read()
 
+# Build the character vocabulary.
 chars = sorted(list(set(text)))
 vocab_size = len(chars)
 
+# Character-to-index and index-to-character mappings.
 stoi = {ch: i for i, ch in enumerate(chars)}
 itos = {i: ch for i, ch in enumerate(chars)}
 
+# Encode and decode helper functions.
 encode = lambda s: [stoi[c] for c in s]
 decode = lambda l: "".join([itos[i] for i in l])
 
-data = torch.tensor(encode(text), dtype=torch.long)
+# Convert the entire dataset into token IDs.
+data = torch.tensor(
+    encode(text),
+    dtype=torch.long,
+)
 
+# 90% training / 10% validation split.
 n = int(0.9 * len(data))
 
 train_data = data[:n]
@@ -55,26 +82,42 @@ val_data = data[n:]
 # Batch Loader
 # ============================================================
 
+
 def get_batch(split):
+    """
+    Generate a random mini-batch.
+
+    Args:
+        split:
+            Either "train" or "val".
+
+    Returns:
+        Input and target tensors moved to the selected device.
+    """
 
     data = train_data if split == "train" else val_data
 
     ix = torch.randint(
         len(data) - block_size,
-        (batch_size,)
+        (batch_size,),
     )
 
-    x = torch.stack([
-        data[i:i + block_size]
-        for i in ix
-    ])
+    x = torch.stack(
+        [
+            data[i:i + block_size]
+            for i in ix
+        ]
+    )
 
-    y = torch.stack([
-        data[i + 1:i + block_size + 1]
-        for i in ix
-    ])
+    y = torch.stack(
+        [
+            data[i + 1:i + block_size + 1]
+            for i in ix
+        ]
+    )
 
     return x.to(device), y.to(device)
+
 
 # ============================================================
 # Loss Estimation
@@ -82,6 +125,12 @@ def get_batch(split):
 
 @torch.no_grad()
 def estimate_loss():
+    """
+    Estimate average training and validation loss.
+
+    The model is temporarily switched to evaluation mode before
+    computing the losses and then restored to training mode.
+    """
 
     out = {}
 
@@ -105,6 +154,7 @@ def estimate_loss():
 
     return out
 
+
 # ============================================================
 # Create Model
 # ============================================================
@@ -119,7 +169,10 @@ model = GPTLanguageModel(
 
 model = model.to(device)
 
-print(f"\nModel Parameters: {sum(p.numel() for p in model.parameters()):,}\n")
+print(
+    f"\nModel Parameters: "
+    f"{sum(p.numel() for p in model.parameters()):,}\n"
+)
 
 optimizer = torch.optim.AdamW(
     model.parameters(),
@@ -130,7 +183,10 @@ optimizer = torch.optim.AdamW(
 # Training Loop
 # ============================================================
 
-os.makedirs("checkpoints", exist_ok=True)
+os.makedirs(
+    "checkpoints",
+    exist_ok=True,
+)
 
 for iteration in range(max_iters):
 
@@ -144,6 +200,7 @@ for iteration in range(max_iters):
             f"Val Loss: {losses['val']:.4f}"
         )
 
+        # Save an intermediate checkpoint.
         torch.save(
             model.state_dict(),
             "checkpoints/gpt.pt",
@@ -160,7 +217,7 @@ for iteration in range(max_iters):
     optimizer.step()
 
 # ============================================================
-# Final Save
+# Save Final Model
 # ============================================================
 
 torch.save(
@@ -187,4 +244,9 @@ generated = model.generate(
 
 print("\nGenerated Text:\n")
 
-print(decode(generated[0].tolist()))
+print(
+    decode(
+        generated[0].tolist()
+    )
+)
+
