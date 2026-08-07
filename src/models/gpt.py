@@ -13,6 +13,8 @@ class GPTLanguageModel(nn.Module):
   ):
       super().__init__()
 
+      self.block_size = block_size
+
       self.token_embedding_table = nn.Embedding(
           vocab_size,
           n_embed
@@ -77,3 +79,28 @@ class GPTLanguageModel(nn.Module):
         )
 
     return logits, loss
+
+  @torch.no_grad()
+  def generate(self, idx, max_new_tokens):
+
+      for _ in range(max_new_tokens):
+
+          idx_cond = idx[:, -self.block_size:]
+
+          logits, _ = self(idx_cond)
+
+          logits = logits[:, -1, :]
+
+          probs = torch.softmax(logits, dim=-1)
+
+          idx_next = torch.multinomial(
+              probs,
+              num_samples=1
+          )
+
+          idx = torch.cat(
+              (idx, idx_next),
+              dim=1)
+
+      return idx
+      
